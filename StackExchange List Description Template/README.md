@@ -1,0 +1,1 @@
+These templates were created for a question asked on StackExchange: [Creating customized search results in SharePoint 2013 with Display Template](http://sharepoint.stackexchange.com/questions/128284/creating-customized-search-results-in-sharepoint-2013-with-dispaly-template/ "Creating customized search results in SharePoint 2013 with Display Template")

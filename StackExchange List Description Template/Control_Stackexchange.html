@@ -1,0 +1,84 @@
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882"> 
+<head>
+<title>List Stackexchange</title>
+
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:TemplateHidden msdt:dt="string">0</mso:TemplateHidden>
+<mso:MasterPageDescription msdt:dt="string">Stackexchange</mso:MasterPageDescription>
+<mso:ContentTypeId msdt:dt="string">0x0101002039C03B61C64EC4A04F5361F385106601</mso:ContentTypeId>
+<mso:TargetControlType msdt:dt="string">;#Content Web Parts;#</mso:TargetControlType>
+<mso:HtmlDesignAssociated msdt:dt="string">1</mso:HtmlDesignAssociated>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+</head>
+
+<body>
+    <script>
+        Type.registerNamespace('search.Stackexchange');
+
+        search.Stackexchange = function() {
+            var currentCtx;
+
+            var init = function (currentContext, ulId, elmId) {
+                currentCtx = currentContext;
+
+                // Creating empty strings
+                currentCtx.listItems = "";
+                currentCtx.descItems = "";
+
+                // Add an on post render callback, this will be excuted when all the results are rendered
+                AddPostRenderCallback(currentContext, function() {
+                    var ulElm = document.getElementById(ulId);
+                    var descElm = document.getElementById(elmId);
+                    show(ulElm, descElm);
+                });
+            },
+            push = function (title, description) {
+                currentCtx.listItems += '<li>' + title + '</li>';
+                currentCtx.descItems += '<div>' + description + '</div>';
+            },
+            show = function (ulElm, descElm) {
+                ulElm.innerHTML += currentCtx.listItems;
+                descElm.innerHTML += currentCtx.descItems;
+            };
+
+            return {
+                init: init, 
+                push: push,
+                show: show
+            };
+        }();
+
+        Srch.U.registerRenderTemplateByName("stackexchange_init", search.Stackexchange.init);
+        Srch.U.registerRenderTemplateByName("stackexchange_push", search.Stackexchange.push);
+        Srch.U.registerRenderTemplateByName("stackexchange_show", search.Stackexchange.show);
+    </script>
+
+    <div id="Control_Stackexchange">
+<!--#_ 
+var dtId = ctx.ClientControl.get_nextUniqueId();
+var ulId = $htmlEncode(dtId + "_List");
+var descId = $htmlEncode(dtId + "_Descriptions");
+
+Srch.U.getRenderTemplateCollection().stackexchange_init(ctx, ulId, descId);
+
+if (!$isNull(ctx.ClientControl) &&
+    !$isNull(ctx.ClientControl.shouldRenderControl) &&
+    !ctx.ClientControl.shouldRenderControl())
+{
+    return "";
+}
+ctx.ListDataJSONGroupsKey = "ResultTables";
+_#-->
+        _#= ctx.RenderGroups(ctx) =#_
+
+        <ul id="_#= ulId =#_">
+
+        </ul>
+        <div id="_#= descId =#_">
+            
+        </div>
+    </div>
+</body>
+</html>
