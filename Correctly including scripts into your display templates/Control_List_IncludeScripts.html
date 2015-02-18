@@ -28,9 +28,13 @@ RegisterSodDep('script2.js', 'script1.js');
 RegisterSodDep('script3.js', 'script2.js');
 
 AddPostRenderCallback(ctx, function () {
-    EnsureScriptFunc("script3.js", null, function() {
+    if (typeof Script3 === "undefined") {
+        EnsureScriptFunc("script3.js", null, function() {
+            Script3("Template");
+        });
+    } else {
         Script3("Template");
-    });
+    }
 });
 /* Stop - script registration plus execution */
 
