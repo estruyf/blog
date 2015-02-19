@@ -1,0 +1,34 @@
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882"> 
+<head>
+<title>Item with Settings Template</title>
+
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:TemplateHidden msdt:dt="string">0</mso:TemplateHidden>
+<mso:ManagedPropertyMapping msdt:dt="string">'Link URL':'Path','Line 1':'Title','Line 2':'','FileExtension','SecondaryFileExtension','setting_Value1'{Setting Description 1}:'2','setting_Value2'{Setting Description 2}:'String Value'</mso:ManagedPropertyMapping>
+<mso:MasterPageDescription msdt:dt="string">Template with configurable settings.</mso:MasterPageDescription>
+<mso:ContentTypeId msdt:dt="string">0x0101002039C03B61C64EC4A04F5361F385106603</mso:ContentTypeId>
+<mso:TargetControlType msdt:dt="string">;#Content Web Parts;#</mso:TargetControlType>
+<mso:HtmlDesignAssociated msdt:dt="string">1</mso:HtmlDesignAssociated>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+</head>
+
+<body>
+    <div id="Property_Template">
+<!--#_
+        var line1 = $getItemValue(ctx, "Line 1");
+
+        var setting1 = $getItemValue(ctx, "setting_Value1");
+        var setting1_value = setting1.propertyMappings.toString();
+        var setting2 = $getItemValue(ctx, "setting_Value2");
+        var setting2_value = setting2.propertyMappings.toString();
+_#-->
+        <div class="cbs-Item">
+            <span>Item: _#= line1 =#_</span> - 
+            Setting 1: <strong>_#= setting1_value =#_</strong> - 
+            Setting 2: <strong>_#= setting2_value =#_</strong>
+        </div>
+    </div>
+</body>
+</html>
