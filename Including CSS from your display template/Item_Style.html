@@ -16,40 +16,38 @@
 
 <body>
     <script>
-         Type.registerNamespace('loadCssDT');
-         loadCssDT = function () {
-             var added = false;
-             
-             // Add styles that are required for this template
+        Type.registerNamespace('loadCssDT');
+        loadCssDT = function () {
+            var added = false;
+            
+            // Add styles that are required for this template
             var styles = (function() {/*
-                .cbs-Line1Link {
+                .cbs-Item {
                     font-weight: bold;
                 }
             */}).toString().slice(15, -3);
-             
-             var init = function () {
-                 // Check if CSS is already added
-                 if (!added) {
-                    var head = document.head || document.getElementsByTagName('head')[0],
-                        style = document.createElement('style');
+            
+            return {
+                init: function () {
+                    // Check if CSS is already added
+                    if (!added) {
+                        var head = document.head || document.getElementsByTagName('head')[0],
+                            style = document.createElement('style');
 
-                    style.type = 'text/css';
-                    if (style.styleSheet){
-                        style.styleSheet.cssText = styles;
-                    } else {
-                        style.appendChild(document.createTextNode(styles));
+                        style.type = 'text/css';
+                        if (style.styleSheet){
+                            style.styleSheet.cssText = styles;
+                        } else {
+                            style.appendChild(document.createTextNode(styles));
+                        }
+                        head.appendChild(style);
+                        // Set added to true, to not read the CSS code to the page
+                        added = true;
                     }
-                    head.appendChild(style);
-                    // Set added to true, to not read the CSS code to the page
-                    added = true;
-                 }
-             };
-             
-             return {
-                 init: init
-             };
-         }();
-         loadCssDT.init();
+                }
+            };
+        }();
+        loadCssDT.init();
     </script>
 
     <div id="ItemStyle">
