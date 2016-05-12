@@ -1,5 +1,6 @@
 ///<reference path="typings/sharepoint/SharePoint.d.ts" />
 ///<reference path="typings/q/q.d.ts" />
+///<reference path="typings/pluralize/pluralize.d.ts" />
 
 /*
 
@@ -14,6 +15,19 @@ Script which hooks into the query execution flow of a page using search web part
 The script requires jQuery to be loaded on the page, and then you can just attach this script on any page with script editor web part,
 content editor web part, custom action or similar.
 
+
+Usecase 1 - Static variables
+----------------------------
+Any variable which is persistant for the user across sessions should be loaded 
+
+<TODO: describe load of user variables>
+<TODO: describe synonyms scenarios>
+
+
+Query:
+OLD: {searchboxquery} {? OR {|{mAdcOWSynonyms}}}
+NEW: {SynonymQuery}
+
 */
 "use strict";
 
@@ -24,6 +38,7 @@ interface SynonymValue {
 }
 
 import Q = require('q');
+import pluralize = require('pluralize');
 declare var Srch;
 declare var Sys;
 module mAdcOW.Search.VariableInjection {
@@ -31,9 +46,14 @@ module mAdcOW.Search.VariableInjection {
     var _userDefinedVariables = {};
     var _synonymTable = {};
     var _dataProviders = [];
+    var _processedIds: string[] = [];
     var _origExecuteQuery = Microsoft.SharePoint.Client.Search.Query.SearchExecutor.prototype.executeQuery;
     var _origExecuteQueries = Microsoft.SharePoint.Client.Search.Query.SearchExecutor.prototype.executeQueries;
+    var _getHighlightedProperty = Srch.U.getHighlightedProperty;
     var _siteUrl: string = _spPageContextInfo.webAbsoluteUrl;
+    
+    const PROP_SYNONYMQUERY = "SynonymQuery";
+    const PROP_SYNONYM = "Synonyms";
 
     // Function to load synonyms asynchronous - poor mans synonyms
     function loadSynonyms() {
@@ -86,18 +106,21 @@ module mAdcOW.Search.VariableInjection {
         // Remove complex query parts AND/OR/NOT/ANY/ALL/parenthasis/property queries/exclusions - can probably be improved            
         var cleanQuery: string = query.replace(/(-\w+)|(-"\w+.*?")|(-?\w+[:=<>]+\w+)|(-?\w+[:=<>]+".*?")|((\w+)?\(.*?\))|(AND)|(OR)|(NOT)/g, '');
         var queryParts: string[] = cleanQuery.match(/("[^"]+"|[^"\s]+)/g);
+        var synonyms: string[] = [];
         
         if (queryParts) {
             for (var i = 0; i < queryParts.length; i++) {
                 if (_synonymTable[queryParts[i]]) {
                     // Replace the current query part in the query with all the synonyms
                     query = query.replace(queryParts[i], String.format('({0} OR {1})', queryParts[i], _synonymTable[queryParts[i]].join(' OR ')));
+                    synonyms.push(_synonymTable[queryParts[i]]);
                 }
             }
         }
         
-        // Add a custom action for the synonym query
-        dataProvider.get_properties()["SynonymQuery"] = query;
+        // Update the keyword query
+        dataProvider.get_properties()[PROP_SYNONYMQUERY] = query;
+        dataProvider.get_properties()[PROP_SYNONYM] = synonyms;
     }
 
     // Sample function to load user variables asynchronous
@@ -163,6 +186,8 @@ module mAdcOW.Search.VariableInjection {
                 dataProvider.add_queryIssuing((sender, e) => {
                     // code which should modify the current query based on context for each new query
                     injectSynonyms(e.queryState.k, sender);
+                    // reset the processed IDs
+                    _processedIds= [];
                 });
 
                 _dataProviders.push(dataProvider);
@@ -192,11 +217,69 @@ module mAdcOW.Search.VariableInjection {
             });
         }
     }
+    
+    function setSynonymHighlighting (itemId: string, crntItem, mp: string) {
+        var highlightedProp = crntItem["HitHighlightedProperties"];
+        var highlightedSummary = crntItem["HitHighlightedSummary"];
+        // Check if ID is already processed
+        if (_processedIds.indexOf(itemId) === -1) {
+            var queryGroups = Srch.ScriptApplicationManager.get_current().queryGroups;
+            for (var group in queryGroups) {
+                if (queryGroups.hasOwnProperty(group)) {
+                    var dataProvider = queryGroups[group].dataProvider;
+                    var properties = dataProvider.get_properties();
+                    
+                    if (typeof properties[PROP_SYNONYM] !== 'undefined') {
+                        let crntSynonyms = properties[PROP_SYNONYM];
+                        // Loop over all the synonyms for the current query
+                        for (let i = 0; i < crntSynonyms.length; i++) {
+                            let crntSynonym: string[] = crntSynonyms[i];
+                            for (let j = 0; j < crntSynonym.length; j++ ) {
+                                let synonymVal: string = crntSynonym[j];
+                                // Remove quotes from the synonym
+                                synonymVal = synonymVal.replace(/['"]+/g, '');
+                                highlightedProp = highlightSynonyms(highlightedProp, synonymVal);
+                                highlightedSummary = highlightSynonyms(highlightedSummary, synonymVal);
+                            }
+                        }
+                    }
+                    _processedIds.push(itemId);
+                }
+            }
+        }
+        crntItem["HitHighlightedProperties"] = highlightedProp;
+        crntItem["HitHighlightedSummary"] = highlightedSummary;
+        // Call the original function
+        return _getHighlightedProperty(itemId, crntItem, mp);
+    }
+    
+    function highlightSynonyms(prop: string, synVal: string) {
+        // Remove all <t0/> tags from the property value
+        prop = prop.replace(/<t0\/>/g, '');
+        // Add the required tags to the highlighted properties
+        let occurences: string = prop.split(new RegExp('\\b' + synVal.toLowerCase() + '\\b', 'ig')).join('{replace}');
+        if (occurences.indexOf('{replace}') !== -1) {
+            // Retrieve all the matching values, this is important to display the same display value
+            let matches: string[] = prop.match(new RegExp('\\b' + synVal.toLowerCase() + '\\b', 'ig'));
+            if (matches !== null) {
+                matches.forEach((m, index) => {
+                    occurences = occurences.replace('{replace}', '<c0>' + m + '</c0>');
+                });
+                prop = occurences;
+            }
+        }
+        
+        // Check the plurals of the synonym
+        let synPlural: string = pluralize(synVal);
+        if (synPlural !== synVal) {
+            prop = highlightSynonyms(prop, synPlural);
+        }
+        
+        return prop;
+    }
 
     // Loader function to hook in client side custom query variables
     function hookCustomQueryVariables() {
-        console.log("Hooking variable injection");
-
         // TODO: Check if we have cached data, if so, no need to intercept for async web parts
         // Override both executeQuery and executeQueries
 
@@ -208,6 +291,10 @@ module mAdcOW.Search.VariableInjection {
         Microsoft.SharePoint.Client.Search.Query.SearchExecutor.prototype.executeQueries = (queryIds: string[], queries: Microsoft.SharePoint.Client.Search.Query.Query[], handleExceptions: boolean) => {
             loadDataAndSearch();
             return new SP.JsonObjectResult();
+        }
+        
+        Srch.U.getHighlightedProperty = (itemId, crntItem, mp) => {
+            return setSynonymHighlighting(itemId, crntItem, mp);
         }
     }
 
