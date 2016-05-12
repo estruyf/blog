@@ -14,14 +14,6 @@ Script which hooks into the query execution flow of a page using search web part
 The script requires jQuery to be loaded on the page, and then you can just attach this script on any page with script editor web part,
 content editor web part, custom action or similar.
 
-
-Usecase 1 - Static variables
-----------------------------
-Any variable which is persistant for the user across sessions should be loaded 
-
-<TODO: describe load of user variables>
-<TODO: describe synonyms scenarios>
-
 */
 "use strict";
 
@@ -94,29 +86,18 @@ module mAdcOW.Search.VariableInjection {
         // Remove complex query parts AND/OR/NOT/ANY/ALL/parenthasis/property queries/exclusions - can probably be improved            
         var cleanQuery: string = query.replace(/(-\w+)|(-"\w+.*?")|(-?\w+[:=<>]+\w+)|(-?\w+[:=<>]+".*?")|((\w+)?\(.*?\))|(AND)|(OR)|(NOT)/g, '');
         var queryParts: string[] = cleanQuery.match(/("[^"]+"|[^"\s]+)/g);
-        var expansions: string[] = [];
         
         if (queryParts) {
             for (var i = 0; i < queryParts.length; i++) {
                 if (_synonymTable[queryParts[i]]) {
-                    //expansions.push.apply(expansions, _synonymTable[queryParts[i]]);
                     // Replace the current query part in the query with all the synonyms
                     query = query.replace(queryParts[i], String.format('({0} OR {1})', queryParts[i], _synonymTable[queryParts[i]].join(' OR ')));
                 }
             }
         }
         
-        // Update the keyword query
-        //dataProvider.get_currentQueryState().k = query;
+        // Add a custom action for the synonym query
         dataProvider.get_properties()["SynonymQuery"] = query;
-         
-        /*
-        if (expansions.length > 0) {
-            dataProvider.get_properties()["mAdcOWSynonyms"] = expansions;
-        } else {
-            delete dataProvider.get_properties()["mAdcOWSynonyms"];
-        }
-        */
     }
 
     // Sample function to load user variables asynchronous
