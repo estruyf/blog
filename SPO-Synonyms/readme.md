@@ -54,7 +54,7 @@ The **DoubleUsage** field is in place to solve this issue so that you only have 
 ##Result
 If I do a search query for **mp** on my environment, I should also get results for **managed property**.
 
-![MP Search Query](/screenshots/example.png)
+![MP Search Query](https://raw.githubusercontent.com/estruyf/blog/master/SPO-Synonyms/screenshots/example.png "MP Search Query")
 
 ##Credits
 Thank you [Mikael Svenson](https://twitter.com/mikaelsvenson) for creating the initial script.
