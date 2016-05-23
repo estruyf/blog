@@ -1,4 +1,4 @@
-#SharePoint Online Synonyms
+#SharePoint Online - User Profile Properties, Noise Words, and Synonyms
 ##Installation
 1. Clone this repo
 2. Open a command promp
@@ -11,10 +11,22 @@ npm install
 **Important**: You need to have webpack installed - ``npm install webpack -p``
 
 ##Compile the code
-1. Run
-``
-webpack
-``
+1. Run ``webpack`` or ``webpack -p`` (if you want the minimized version)
+
+##Script configuration
+With the script you are able to automatically retrieve all the user profile properties, remove noise words from the query and search for synonyms.
+
+You have the option to define which type of actions you want to include in your environment:
+```javascript
+// Retrieve all user profile properties
+const GetUserProfileProperties = true;
+// Query and show synonyms
+const ShowSynonyms = true;
+// Remove noise words from your search queries
+const RemoveNoiseWords = true;
+// Synonym list title
+const SynonymsList = 'Synonyms';
+```
 
 ##Creating the Synonyms List
 Create a **Synonyms** (list name) SharePoint list with the following fields: **Title**, **Synonym** (multiple lines without markup), **DoubleUsage** (yes/no).
