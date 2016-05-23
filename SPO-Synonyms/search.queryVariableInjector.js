@@ -70,15 +70,21 @@
 
 
 	Query:
-	OLD: {searchboxquery} {? OR {|{mAdcOWSynonyms}}}
 	NEW: {SynonymQuery}
 
 	*/
 	"use strict";
+	/*****************************************************************************
+	 * The following variables can be used to configure the script to your needs *
+	 *****************************************************************************/
+	var GetUserProfileProperties = false;
+	var ShowSynonyms = true;
+	var RemoveNoiseWords = true;
+	var SynonymsList = 'Synonyms';
 	var Q = __webpack_require__(1);
 	var pluralize = __webpack_require__(4);
-	var mAdcOW;
-	(function (mAdcOW) {
+	var spcsr;
+	(function (spcsr) {
 	    var Search;
 	    (function (Search) {
 	        var VariableInjection;
@@ -94,11 +100,39 @@
 	            var _siteUrl = _spPageContextInfo.webAbsoluteUrl;
 	            var PROP_SYNONYMQUERY = "SynonymQuery";
 	            var PROP_SYNONYM = "Synonyms";
-	            var NOISE_WORDS = "about,after,all,also,an,another,any,are,as,at,be,because,been,before,being,between,both,but,by,came,can,come,could,did,do,each,for,from,get,got,has,had,he,have,her,here,him,himself,his,how,if,in,into,is,it,like,make,many,me,might,more,most,much,must,my,never,now,of,on,only,or,other,our,out,over,said,same,see,should,since,some,still,such,take,than,that,the,their,them,then,there,these,they,this,those,through,to,too,under,up,very,was,way,we,well,were,what,where,which,while,who,with,would,you,your,a".split(',');
+	            var HIGHLIGHTED_PROPERTIES = 'HitHighlightedProperties';
+	            var HIGHLIGHTED_SUMMARY = 'HitHighlightedSummary';
+	            var NOISE_WORDS = "about,after,all,also,an,another,any,are,as,at,be,because,been,before,being,between,both,but,by,came,can,come,could,did,do,each,for,from,get,got,has,had,he,have,her,here,him,himself,his,how,if,in,into,is,it,like,make,many,me,might,more,most,much,must,my,never,now,of,on,only,other,our,out,over,said,same,see,should,since,some,still,such,take,than,that,the,their,them,then,there,these,they,this,those,through,to,too,under,up,very,was,way,we,well,were,what,where,which,while,who,with,would,you,your,a".split(',');
+	            // Load user poperties and synonyms
+	            function loadDataAndSearch() {
+	                if (!_loading) {
+	                    _loading = true;
+	                    // run all async code needed to pull in data for variables
+	                    Q.all([loadSynonyms(), loadUserVariables()]).done(function () {
+	                        // set loaded data as custom query variables
+	                        injectCustomQueryVariables();
+	                        // reset to original function
+	                        Microsoft.SharePoint.Client.Search.Query.SearchExecutor.prototype.executeQuery = _origExecuteQuery;
+	                        Microsoft.SharePoint.Client.Search.Query.SearchExecutor.prototype.executeQueries = _origExecuteQueries;
+	                        // re-issue query for the search web parts
+	                        for (var i = 0; i < _dataProviders.length; i++) {
+	                            // complete the intercepted event
+	                            _dataProviders[i].raiseResultReadyEvent(new Srch.ResultEventArgs(_dataProviders[i].get_initialQueryState()));
+	                            // re-issue query
+	                            _dataProviders[i].issueQuery();
+	                        }
+	                    });
+	                }
+	            }
 	            // Function to load synonyms asynchronous - poor mans synonyms
 	            function loadSynonyms() {
 	                var defer = Q.defer();
-	                var urlSynonymsList = _siteUrl + "/_api/Web/Lists/getByTitle('Synonyms')/Items?$select=Title,Synonym,DoubleUsage";
+	                // Check if the code has to retrieve synonyms
+	                if (!ShowSynonyms) {
+	                    defer.resolve();
+	                    return defer.promise;
+	                }
+	                var urlSynonymsList = _siteUrl + "/_api/Web/Lists/getByTitle('" + SynonymsList + "')/Items?$select=Title,Synonym,DoubleUsage";
 	                var req = new XMLHttpRequest();
 	                req.onreadystatechange = function () {
 	                    if (this.readyState === 4) {
@@ -133,7 +167,7 @@
 	                            defer.resolve();
 	                        }
 	                        else if (this.status >= 400) {
-	                            console.error("getJSON failed, status: " + this.textStatus + ", error: " + this.error);
+	                            //console.error("getJSON failed, status: " + this.textStatus + ", error: " + this.error);
 	                            defer.reject(this.statusText);
 	                        }
 	                    }
@@ -144,38 +178,31 @@
 	                return defer.promise;
 	            }
 	            // Function to inject synonyms at run-time
-	            function injectSynonyms(query, dataProvider) {
+	            function processCustomQuery(query, dataProvider) {
 	                // Remove complex query parts AND/OR/NOT/ANY/ALL/parenthasis/property queries/exclusions - can probably be improved            
 	                var cleanQuery = query.replace(/(-\w+)|(-"\w+.*?")|(-?\w+[:=<>]+\w+)|(-?\w+[:=<>]+".*?")|((\w+)?\(.*?\))|(AND)|(OR)|(NOT)/g, '');
 	                var queryParts = cleanQuery.match(/("[^"]+"|[^"\s]+)/g);
 	                var synonyms = [];
-	                if (queryParts) {
-	                    for (var i = 0; i < queryParts.length; i++) {
-	                        if (_synonymTable[queryParts[i]]) {
-	                            // Replace the current query part in the query with all the synonyms
-	                            query = query.replace(queryParts[i], String.format('({0} OR {1})', queryParts[i], _synonymTable[queryParts[i]].join(' OR ')));
-	                            synonyms.push(_synonymTable[queryParts[i]]);
+	                // code which should modify the current query based on context for each new query
+	                if (ShowSynonyms) {
+	                    if (queryParts) {
+	                        for (var i = 0; i < queryParts.length; i++) {
+	                            if (_synonymTable[queryParts[i]]) {
+	                                // Replace the current query part in the query with all the synonyms
+	                                query = query.replace(queryParts[i], String.format('({0} OR {1})', queryParts[i], _synonymTable[queryParts[i]].join(' OR ')));
+	                                synonyms.push(_synonymTable[queryParts[i]]);
+	                            }
 	                        }
 	                    }
+	                }
+	                // remove noise words from the search query
+	                if (RemoveNoiseWords) {
+	                    // Call function to remove the noise words from the search query
+	                    query = replaceNoiseWords(query);
 	                }
 	                // Update the keyword query
 	                dataProvider.get_properties()[PROP_SYNONYMQUERY] = query;
 	                dataProvider.get_properties()[PROP_SYNONYM] = synonyms;
-	            }
-	            // Function to remove the noise words from the search query
-	            function removeCustomNoiseWords(query, dataProvider) {
-	                var queryGroups = Srch.ScriptApplicationManager.get_current().queryGroups;
-	                for (var group in queryGroups) {
-	                    if (queryGroups.hasOwnProperty(group)) {
-	                        var dataProvider = queryGroups[group].dataProvider;
-	                        var queryText = dataProvider.get_properties()[PROP_SYNONYMQUERY + '123'];
-	                        if (typeof queryText === 'undefined' || queryText === null) {
-	                            queryText = query;
-	                        }
-	                        queryText = replaceNoiseWords(queryText);
-	                        dataProvider.get_properties()[PROP_SYNONYMQUERY] = queryText;
-	                    }
-	                }
 	            }
 	            // Function that replaces the noise words with nothing
 	            function replaceNoiseWords(query) {
@@ -183,11 +210,16 @@
 	                while (t--) {
 	                    query = query.replace(new RegExp('\\b' + NOISE_WORDS[t] + '\\b', "ig"), '');
 	                }
-	                return query;
+	                return query.trim();
 	            }
 	            // Sample function to load user variables asynchronous
 	            function loadUserVariables() {
 	                var defer = Q.defer();
+	                // Check if the code has to retrieve the user profile properties
+	                if (!GetUserProfileProperties) {
+	                    defer.resolve();
+	                    return defer.promise;
+	                }
 	                SP.SOD.executeFunc('sp.js', 'SP.ClientContext', function () {
 	                    // Query user hidden list - not accessible via REST
 	                    // If you want TERM guid's you need to mix and match the use of UserProfileManager and TermStore and cache client side
@@ -202,19 +234,19 @@
 	                                    if (user.hasOwnProperty(property)) {
 	                                        var val = user[property];
 	                                        if (typeof val == "number") {
-	                                            console.log(property + " : " + val);
-	                                            _userDefinedVariables["mAdcOWUser." + property] = val;
+	                                            //console.log(property + " : " + val);
+	                                            _userDefinedVariables["spcsrUser." + property] = val;
 	                                        }
 	                                        else if (typeof val == "string") {
-	                                            console.log(property + " : " + val);
-	                                            _userDefinedVariables["mAdcOWUser." + property] = val.split(/[\s,]+/);
+	                                            //console.log(property + " : " + val);
+	                                            _userDefinedVariables["spcsrUser." + property] = val.split(/[\s,]+/);
 	                                        }
 	                                    }
 	                                }
 	                                defer.resolve();
 	                            }
 	                            else if (this.status >= 400) {
-	                                console.error("getJSON failed, status: " + this.textStatus + ", error: " + this.error);
+	                                //console.error("getJSON failed, status: " + this.textStatus + ", error: " + this.error);
 	                                defer.reject(this.statusText);
 	                            }
 	                        }
@@ -232,21 +264,16 @@
 	                    if (queryGroups.hasOwnProperty(group)) {
 	                        var dataProvider = queryGroups[group].dataProvider;
 	                        var properties = dataProvider.get_properties();
-	                        // add all user variables fetched and stored as mAdcOWUser.
+	                        // add all user variables fetched and stored as spcsrUser.
 	                        for (var prop in _userDefinedVariables) {
 	                            if (_userDefinedVariables.hasOwnProperty(prop)) {
 	                                properties[prop] = _userDefinedVariables[prop];
 	                            }
 	                        }
-	                        // add some custom variables for show
-	                        dataProvider.get_properties()["awesomeness"] = "WOOOOOOT";
-	                        dataProvider.get_properties()["moreawesomeness"] = ["foo", "bar"];
 	                        // set hook for query time variables which can change
 	                        dataProvider.add_queryIssuing(function (sender, e) {
-	                            // code which should modify the current query based on context for each new query
-	                            injectSynonyms(e.queryState.k, sender);
-	                            // remove noise words from the search query
-	                            removeCustomNoiseWords(e.queryState.k, sender);
+	                            // Process query (remove noise words and add synonyms)
+	                            processCustomQuery(e.queryState.k, sender);
 	                            // reset the processed IDs
 	                            _processedIds = [];
 	                        });
@@ -254,30 +281,10 @@
 	                    }
 	                }
 	            }
-	            function loadDataAndSearch() {
-	                if (!_loading) {
-	                    _loading = true;
-	                    // run all async code needed to pull in data for variables
-	                    Q.all([loadSynonyms() /*, loadUserVariables()*/]).done(function () {
-	                        // set loaded data as custom query variables
-	                        injectCustomQueryVariables();
-	                        // reset to original function
-	                        Microsoft.SharePoint.Client.Search.Query.SearchExecutor.prototype.executeQuery = _origExecuteQuery;
-	                        Microsoft.SharePoint.Client.Search.Query.SearchExecutor.prototype.executeQueries = _origExecuteQueries;
-	                        // re-issue query for the search web parts
-	                        for (var i = 0; i < _dataProviders.length; i++) {
-	                            // complete the intercepted event
-	                            _dataProviders[i].raiseResultReadyEvent(new Srch.ResultEventArgs(_dataProviders[i].get_initialQueryState()));
-	                            // re-issue query
-	                            _dataProviders[i].issueQuery();
-	                        }
-	                    });
-	                }
-	            }
 	            // Function to add the synonym highlighting to the highlighted properties
 	            function setSynonymHighlighting(itemId, crntItem, mp) {
-	                var highlightedProp = crntItem["HitHighlightedProperties"];
-	                var highlightedSummary = crntItem["HitHighlightedSummary"];
+	                var highlightedProp = crntItem[HIGHLIGHTED_PROPERTIES];
+	                var highlightedSummary = crntItem[HIGHLIGHTED_SUMMARY];
 	                // Check if ID is already processed
 	                if (_processedIds.indexOf(itemId) === -1) {
 	                    var queryGroups = Srch.ScriptApplicationManager.get_current().queryGroups;
@@ -285,6 +292,7 @@
 	                        if (queryGroups.hasOwnProperty(group)) {
 	                            var dataProvider = queryGroups[group].dataProvider;
 	                            var properties = dataProvider.get_properties();
+	                            // Check synonym custom property exists
 	                            if (typeof properties[PROP_SYNONYM] !== 'undefined') {
 	                                var crntSynonyms = properties[PROP_SYNONYM];
 	                                // Loop over all the synonyms for the current query
@@ -295,56 +303,65 @@
 	                                        // Remove quotes from the synonym
 	                                        synonymVal = synonymVal.replace(/['"]+/g, '');
 	                                        // Highlight synonyms and remove the noise words
-	                                        highlightedProp = removeNoiseHighlightWords(highlightSynonyms(highlightedProp, synonymVal));
-	                                        highlightedSummary = removeNoiseHighlightWords(highlightSynonyms(highlightedSummary, synonymVal));
+	                                        highlightedProp = highlightSynonyms(highlightedProp, synonymVal);
+	                                        highlightedSummary = highlightSynonyms(highlightedSummary, synonymVal);
 	                                    }
 	                                }
 	                            }
+	                            // Remove the noise words
+	                            highlightedProp = removeNoiseHighlightWords(highlightedProp);
+	                            highlightedSummary = removeNoiseHighlightWords(highlightedSummary);
 	                            _processedIds.push(itemId);
 	                        }
 	                    }
 	                }
-	                crntItem["HitHighlightedProperties"] = highlightedProp;
-	                crntItem["HitHighlightedSummary"] = highlightedSummary;
+	                crntItem[HIGHLIGHTED_PROPERTIES] = highlightedProp;
+	                crntItem[HIGHLIGHTED_SUMMARY] = highlightedSummary;
 	                // Call the original highlighting function
 	                return _getHighlightedProperty(itemId, crntItem, mp);
 	            }
 	            // Function that finds the synonyms and adds the required highlight tags
 	            function highlightSynonyms(prop, synVal) {
-	                // Remove all <t0/> tags from the property value
-	                prop = prop.replace(/<t0\/>/g, '');
-	                // Add the required tags to the highlighted properties
-	                var occurences = prop.split(new RegExp('\\b' + synVal.toLowerCase() + '\\b', 'ig')).join('{replace}');
-	                if (occurences.indexOf('{replace}') !== -1) {
-	                    // Retrieve all the matching values, this is important to display the same display value
-	                    var matches = prop.match(new RegExp('\\b' + synVal.toLowerCase() + '\\b', 'ig'));
-	                    if (matches !== null) {
-	                        matches.forEach(function (m, index) {
-	                            occurences = occurences.replace('{replace}', '<c0>' + m + '</c0>');
-	                        });
-	                        prop = occurences;
+	                // Only highlight synonyms when required
+	                if (ShowSynonyms) {
+	                    // Remove all <t0/> tags from the property value
+	                    prop = prop.replace(/<t0\/>/g, '');
+	                    // Add the required tags to the highlighted properties
+	                    var occurences_1 = prop.split(new RegExp('\\b' + synVal.toLowerCase() + '\\b', 'ig')).join('{replace}');
+	                    if (occurences_1.indexOf('{replace}') !== -1) {
+	                        // Retrieve all the matching values, this is important to display the same display value
+	                        var matches = prop.match(new RegExp('\\b' + synVal.toLowerCase() + '\\b', 'ig'));
+	                        if (matches !== null) {
+	                            matches.forEach(function (m, index) {
+	                                occurences_1 = occurences_1.replace('{replace}', '<c0>' + m + '</c0>');
+	                            });
+	                            prop = occurences_1;
+	                        }
 	                    }
-	                }
-	                // Check the plurals of the synonym
-	                var synPlural = pluralize(synVal);
-	                if (synPlural !== synVal) {
-	                    prop = highlightSynonyms(prop, synPlural);
+	                    // Check the plurals of the synonym
+	                    var synPlural = pluralize(synVal);
+	                    if (synPlural !== synVal) {
+	                        prop = highlightSynonyms(prop, synPlural);
+	                    }
 	                }
 	                return prop;
 	            }
 	            // Function which finds highlighted noise words and removes the highlight tags
 	            function removeNoiseHighlightWords(prop) {
-	                // Remove noise from highlighting
-	                var regexp = /<c0>(.*?)<\/c0>/ig;
-	                var noiseWord;
-	                while ((noiseWord = regexp.exec(prop)) !== null) {
-	                    if (noiseWord.index === regexp.lastIndex) {
-	                        regexp.lastIndex++;
-	                    }
-	                    // Check if the noise word exists in the array
-	                    if (NOISE_WORDS.indexOf(noiseWord[1].toLowerCase()) !== -1) {
-	                        // Replace the highlighting with just the noise word
-	                        prop = prop.replace(noiseWord[0], noiseWord[1]);
+	                // Only remove the noise words when required
+	                if (RemoveNoiseWords) {
+	                    // Remove noise from highlighting
+	                    var regexp = /<c0>(.*?)<\/c0>/ig;
+	                    var noiseWord;
+	                    while ((noiseWord = regexp.exec(prop)) !== null) {
+	                        if (noiseWord.index === regexp.lastIndex) {
+	                            regexp.lastIndex++;
+	                        }
+	                        // Check if the noise word exists in the array
+	                        if (NOISE_WORDS.indexOf(noiseWord[1].toLowerCase()) !== -1) {
+	                            // Replace the highlighting with just the noise word
+	                            prop = prop.replace(noiseWord[0], noiseWord[1]);
+	                        }
 	                    }
 	                }
 	                return prop;
@@ -370,8 +387,8 @@
 	                Sys.Application.add_init(hookCustomQueryVariables);
 	            });
 	        })(VariableInjection = Search.VariableInjection || (Search.VariableInjection = {}));
-	    })(Search = mAdcOW.Search || (mAdcOW.Search = {}));
-	})(mAdcOW || (mAdcOW = {}));
+	    })(Search = spcsr.Search || (spcsr.Search = {}));
+	})(spcsr || (spcsr = {}));
 
 
 /***/ },
