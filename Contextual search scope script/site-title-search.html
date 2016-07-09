@@ -1,0 +1,77 @@
+<div id="searchTitle" style="margin-top:21px"></div>
+<script>
+"use strict";
+//ensure we have a logger
+if (!window.console || !window.console.log) {
+    window.console = {
+        log: function () { }
+    }
+}
+
+var estruyf;
+(function (estruyf) {
+    // Get parameteres from the URL
+    function getParameterByName(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+			results = regex.exec(location.search);
+        return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+    }
+
+    // Get title from list or site - using XRANK to boost sites for shorter URL's
+    function getTitleFromUrl(url) {
+        var webUrl = _spPageContextInfo.webAbsoluteUrl;
+        var restUrl = webUrl + "/_api/search/query?querytext='-contentclass:STS_ListItem+XRANK(cb%3d1000)+(contentclass%3dsts_web+OR+contentclass%3dsts_site) path:\"" + url + "\"'&rowlimit=1&selectproperties='title'&clienttype='DNVGL'";
+
+        var request = new XMLHttpRequest();
+        request.open('GET', restUrl, true);
+        request.setRequestHeader('Accept', 'application/json; odata=verbose');
+        request.setRequestHeader('Content-Type', 'application/json; odata=verbose');
+        request.onload = function (e) {
+            if (request.readyState === 4) {
+                // Check if the get was successful
+                if (request.status === 200) {
+                    var data = JSON.parse(request.responseText);
+                    var title = "";
+                    if (data.d.query.PrimaryQueryResult != null) {
+                        var results = data.d.query.PrimaryQueryResult.RelevantResults.Table.Rows.results;
+                        for (var i = 0; i < results.length; i++) {
+                            var result = results[i];
+                            for (var j = 0; j < result.Cells.results.length; j++) {
+                                var cell = result.Cells.results[j];
+                                var propertyName = cell.Key;
+                                if (propertyName === "title") {
+                                    var title = cell.Value;
+                                    var dp = Srch.ScriptApplicationManager.get_current().queryGroups.Default.dataProvider;
+                                    var allUrl = Srch.U.getResultsPageUrl("Results.aspx", dp.get_currentQueryState().k);
+                                    var markup = 'Currently showing results from <a title="' + title + '" href="' + url + '" target="_blank">' + title + '</a>. Click to search in all sites: <a title="Remove current site scope" href="' + allUrl + '">remove site scope</a>.';
+                                    // Insert scope search hint
+                                    document.getElementById("searchTitle").innerHTML = markup;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        request.onerror = function (e) {
+            // Catching errors
+        };
+        request.send(null);
+    }
+
+    function showScopeHint() {
+        var uParam = getParameterByName("u");
+        if (uParam !== "") {
+            getTitleFromUrl(uParam);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        SP.SOD.executeFunc("Search.ClientControls.js", "Srch.ScriptApplicationManager", function () {
+            showScopeHint()
+        });
+    });
+})(estruyf || (estruyf = {}));
+</script>
