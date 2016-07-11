@@ -1,0 +1,89 @@
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882"> 
+<head>
+<title>Custom Refinement</title>
+
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:CompatibleManagedProperties msdt:dt="string"></mso:CompatibleManagedProperties>
+<mso:TemplateHidden msdt:dt="string">0</mso:TemplateHidden>
+<mso:CompatibleSearchDataTypes msdt:dt="string"></mso:CompatibleSearchDataTypes>
+<mso:MasterPageDescription msdt:dt="string"></mso:MasterPageDescription>
+<mso:ContentTypeId msdt:dt="string">0x0101002039C03B61C64EC4A04F5361F385106604</mso:ContentTypeId>
+<mso:TargetControlType msdt:dt="string">;#Refinement;#</mso:TargetControlType>
+<mso:HtmlDesignAssociated msdt:dt="string">1</mso:HtmlDesignAssociated>
+</mso:CustomDocumentProperties></xml><![endif]-->
+</head>
+<body>
+    <div id="CustomRefinement">
+<!--#_
+  // Needed objects
+  var listData = ctx.ListData;
+  var hasControl = true;
+
+  // Check if the current Refinement Control can be exists
+  if ($isNull(ctx.RefinementControl) || $isNull(ctx.ClientControl)) hasControl = false;
+
+  if (hasControl) {
+    if(!$isNull(listData) && !$isEmptyArray(listData)) {
+      // Show the refinement title
+      var isExpanded = Srch.Refinement.getExpanded(ctx.RefinementControl.propertyName);
+      var iconClass = (isExpanded == "true"? "ms-ref-uparrow" : "ms-ref-downarrow");
+      var refinerCatTitle = Srch.Refinement.getRefinementTitle(ctx.RefinementControl);
+      // Display style > needed to hide the refinement list when collapsed
+      var displayStyle = (isExpanded == "true"? "" : "none");
+_#-->
+      <div id='Container'>
+        _#= Srch.U.collapsibleRefinerTitle(ctx.RefinementControl.propertyName, ctx.ClientControl.get_id(), refinerCatTitle, iconClass) =#_
+
+<!--#_
+        // (un)selected filter arrays
+        var unselectedFilters = new Array();
+        var selectedFilters = new Array();
+
+
+        // Fill the arrays with refinement values
+        for (var i = 0; i < listData.length; i++){
+          var filter = listData[i];
+          if(!$isNull(filter)){
+            filter.RefinementTokens = [filter.RefinementToken];
+            filter.RefinementTokenWrappedValues = [Srch.RefinementUtil.stringValueToEqualsToken(filter.RefinementValue)];
+
+            if (ctx.ClientControl.hasAllRefinementFilters(filter.RefinerName, filter.RefinementTokens) ||
+              ctx.ClientControl.hasAllRefinementFilters(filter.RefinerName, filter.RefinementTokenWrappedValues)) {
+              selectedFilters.push(filter);
+            } else {
+              unselectedFilters.push(filter);
+            }
+          }
+        }
+_#-->
+
+        <div id='UnselectedSection' class='ms-ref-unselSec' style='display:_#= $htmlEncode(displayStyle) =#_'>
+        <!--#_
+          for (var i = 0; i < unselectedFilters.length; i++) {
+            var filter = unselectedFilters[i];
+            if(!$isNull(filter)) {
+              var refiners = new Object();
+              refiners[filter.RefinerName] = filter.RefinementTokens;
+              ShowRefiner(filter.RefinementName, filter.RefinementCount);
+            }
+          }
+        _#--> 
+        </div>
+      </div>
+<!--#_
+    }
+  }
+  
+  function ShowRefiner(refinementName, refinementCount) {
+    // Check if the refinement contains results
+    if (refinementCount != null) {
+_#-->
+      _#= $htmlEncode(refinementName) =#_ (_#= refinementCount =#_)
+<!--#_
+    }
+  }
+_#-->
+    </div>
+</body>
+</html>
