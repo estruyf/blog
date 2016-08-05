@@ -1,0 +1,39 @@
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882"> 
+<head>
+<title>Item OWA</title>
+
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:TemplateHidden msdt:dt="string">0</mso:TemplateHidden>
+<mso:ManagedPropertyMapping msdt:dt="string">'Link URL':'Path','Line 1':'Title','ServerRedirectedURL','ServerRedirectedPreviewURL','ServerRedirectedEmbedURL'</mso:ManagedPropertyMapping>
+<mso:MasterPageDescription msdt:dt="string">Display Template description</mso:MasterPageDescription>
+<mso:ContentTypeId msdt:dt="string">0x0101002039C03B61C64EC4A04F5361F385106603</mso:ContentTypeId>
+<mso:TargetControlType msdt:dt="string">;#Content Web Parts;#</mso:TargetControlType>
+<mso:HtmlDesignAssociated msdt:dt="string">1</mso:HtmlDesignAssociated>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+</head>
+
+<body>
+    <script>
+    </script>
+
+    <div id="ItemStarter">
+<!--#_
+var encodedId = $htmlEncode(ctx.ClientControl.get_nextUniqueId() + "_Test");
+
+var line1 = $getItemValue(ctx, "Line 1");
+var ServerRedirectedURL = $getItemValue(ctx, "ServerRedirectedURL");
+var ServerRedirectedPreviewURL = $getItemValue(ctx, "ServerRedirectedPreviewURL");
+var ServerRedirectedEmbedURL = $getItemValue(ctx, "ServerRedirectedEmbedURL");
+_#-->
+        <div id="_#= encodedId =#_">
+            <p>Title: _#= line1 =#_</p>
+            <p>ServerRedirectedURL: _#= ServerRedirectedURL =#_</p>
+            <p>ServerRedirectedPreviewURL: _#= ServerRedirectedPreviewURL =#_</p>
+            <p>ServerRedirectedEmbedURL: _#= ServerRedirectedEmbedURL =#_</p>
+            <hr />
+        </div>
+    </div>
+</body>
+</html>
