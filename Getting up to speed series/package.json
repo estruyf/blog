@@ -7,14 +7,17 @@
     "express": "^4.14.0"
   },
   "devDependencies": {
+    "css-loader": "^0.25.0",
     "gulp": "^3.9.1",
     "gulp-express": "^0.3.5",
     "gulp-sass": "^2.3.2",
-    "gulp-typescript": "^2.13.6"
+    "gulp-typescript": "^2.13.6",
+    "style-loader": "^0.13.1",
+    "webpack": "^1.13.2"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Elio Struyf",
-  "license": "ISC"
+  "license": "MIT"
 }

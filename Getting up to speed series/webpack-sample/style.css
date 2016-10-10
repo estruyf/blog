@@ -1,0 +1,11 @@
+.someclass {
+    background-color: darkblue;
+}
+
+.someclass p {
+    color: white;
+}
+
+.anotherclass {
+    padding: 50px;
+}
