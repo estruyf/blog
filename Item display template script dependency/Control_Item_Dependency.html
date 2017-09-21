@@ -1,0 +1,74 @@
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+
+<head>
+  <title>Control Item Dependency (moment)</title>
+
+  <!--[if gte mso 9]><xml>
+    <mso:CustomDocumentProperties>
+    <mso:TemplateHidden msdt:dt="string">0</mso:TemplateHidden>
+    <mso:MasterPageDescription msdt:dt="string">Display template description</mso:MasterPageDescription>
+    <mso:ContentTypeId msdt:dt="string">0x0101002039C03B61C64EC4A04F5361F385106601</mso:ContentTypeId>
+    <mso:TargetControlType msdt:dt="string">;#Content Web Parts;#</mso:TargetControlType>
+    <mso:HtmlDesignAssociated msdt:dt="string">1</mso:HtmlDesignAssociated>
+    </mso:CustomDocumentProperties>
+    </xml><![endif]-->
+</head>
+
+<body>
+  <script>
+  </script>
+
+  <div id="ControlStarter">
+    <!--#_
+    RegisterSod('moment.min.js', "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js");
+  
+    if (!$isNull(ctx.ClientControl) &&
+        !$isNull(ctx.ClientControl.shouldRenderControl) &&
+        !ctx.ClientControl.shouldRenderControl()) {
+      return "";
+    }
+    ctx.ListDataJSONGroupsKey = "ResultTables";
+    
+    // Create a unique ID for the placeholder element
+    var uniqueId = ctx.ClientControl.get_nextUniqueId();
+  
+    AddPostRenderCallback(ctx, function() {
+      // Ensure that the item script dependency is loaded
+      EnsureScriptFunc("moment.min.js", 'moment', function() {
+        ctx.ListDataJSONGroupsKey = "ResultTables";
+        var $noResults = Srch.ContentBySearch.getControlTemplateEncodedNoResultsMessage(ctx.ClientControl);
+
+        var ListRenderRenderWrapper = function(itemRenderResult, inCtx, tpl) {
+            var iStr = [];
+            iStr.push('<li>');
+            iStr.push(itemRenderResult);
+            iStr.push('</li>');
+            return iStr.join('');
+        }
+        ctx['ItemRenderWrapper'] = ListRenderRenderWrapper;
+
+        // Retrieve the placeholder element
+        var elm = document.querySelector('#' + uniqueId);
+        if (elm !== null) {
+          // Render the results
+          var resultsHtml = ctx.RenderGroups(ctx);
+          // Check if the no results message need to be displayed
+          if (ctx.ClientControl.get_shouldShowNoResultMessage()) {
+            elm.innerHTML = '<div class="ms-srch-result-noResults">' + $noResults + '</div>';
+          } else {
+            // Render the items on the page
+            var markup = [];
+            markup.push('<ul class="cbs-List">');
+            markup.push(resultsHtml);
+            markup.push('</ul');
+            elm.innerHTML = markup.join('');
+          }
+        }
+      });
+    });
+  _#-->
+    <div id="_#=uniqueId=#_"></div>
+  </div>
+</body>
+
+</html>
